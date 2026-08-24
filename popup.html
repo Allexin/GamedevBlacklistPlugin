@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>GameDev.ru Blacklist</title>
+  <style>
+    body { width: 360px; margin: 0; padding: 12px; font: 13px/1.4 system-ui, sans-serif; }
+    h1 { margin: 0 0 10px; font-size: 14px; }
+    .add { display: flex; gap: 6px; }
+    .add input { flex: 1; min-width: 0; padding: 4px 6px; }
+    .add button { padding: 4px 10px; cursor: pointer; }
+    ul { list-style: none; margin: 10px 0 0; padding: 0; max-height: 340px; overflow-y: auto; }
+    li { padding: 6px 0; border-bottom: 1px solid #eee; }
+    .row1 { display: flex; align-items: center; gap: 6px; }
+    .row1 .name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row1 .name small { color: #999; font-weight: 400; margin-left: 4px; }
+    .row1 .remove { border: none; background: none; color: #c00; cursor: pointer; font-size: 16px; line-height: 1; }
+    .row2 { display: flex; align-items: center; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+    .row2 label { display: inline-flex; align-items: center; gap: 3px; color: #555; }
+    .row2 select { padding: 1px 2px; }
+    .row2 .del-toggle { cursor: pointer; }
+    .row2 .del-toggle.on { color: #c00; font-weight: 600; }
+    .empty { color: #999; margin-top: 10px; }
+    .hint { color: #999; font-size: 11px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #eee; }
+  </style>
+</head>
+<body>
+  <h1>Чёрный список gamedev.ru</h1>
+
+  <form class="add" id="add-form">
+    <input id="nick" type="text" placeholder="Ник пользователя" autocomplete="off" required>
+    <button type="submit">Добавить</button>
+  </form>
+
+  <ul id="list"></ul>
+  <p class="empty" id="empty">Список пуст. Ники можно добавлять кнопкой «в ЧС» прямо в теме.</p>
+
+  <template id="row-tpl">
+    <li>
+      <div class="row1">
+        <span class="name"></span>
+        <button class="remove" type="button" title="Убрать из чёрного списка">×</button>
+      </div>
+      <div class="row2">
+        <label>Темы:
+          <select class="topic">
+            <option value="show">показывать</option>
+            <option value="hide">скрывать</option>
+            <option value="replace">заменять</option>
+          </select>
+        </label>
+        <label>Посты:
+          <select class="post">
+            <option value="show">показывать</option>
+            <option value="hide">скрывать</option>
+            <option value="replace">заменять</option>
+          </select>
+        </label>
+        <label class="del-toggle" title="Авто-удалять посты этого автора в ваших темах">
+          <input type="checkbox" class="del">удалять
+        </label>
+      </div>
+    </li>
+  </template>
+
+  <p class="hint">
+    «Заменять» ставит заглушку («Автор темы / Пост автора в ЧС») и прячет ник.
+    «Удалять» удаляет посты автора только в ваших темах, где сайт разрешает удаление
+    (уведомление автору не отправляется); где нельзя — действует настройка «Посты».
+  </p>
+
+  <script src="popup.js"></script>
+</body>
+</html>

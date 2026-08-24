@@ -1,0 +1,59 @@
+.gdbl-hidden {
+  display: none !important;
+}
+
+.gdbl-topic a {
+  color: #999 !important;
+  font-style: italic;
+}
+
+.gdbl-post-head {
+  opacity: 0.45;
+}
+
+.gdbl-nick {
+  color: #999 !important;
+  font-style: italic;
+  font-weight: normal !important;
+}
+
+.gdbl-stub {
+  color: #999;
+  font-style: italic;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 0;
+}
+
+.gdbl-stub:hover {
+  color: #666;
+}
+
+.gdbl-post .gdbl-original {
+  display: none;
+}
+
+.gdbl-post.gdbl-revealed .gdbl-original {
+  display: block;
+  opacity: 0.6;
+  border-left: 3px solid #ddd;
+  padding-left: 8px;
+  margin-top: 4px;
+}
+
+.gdbl-btn {
+  margin-top: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 16px;
+  color: #777;
+  background: #f4f4f4;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.gdbl-btn:hover {
+  color: #c00;
+  border-color: #c00;
+}
