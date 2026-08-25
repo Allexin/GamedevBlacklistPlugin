@@ -1,1 +1,3 @@
 .aide/
+dist/
+.web-ext-credentials.json
