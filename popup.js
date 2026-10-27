@@ -7,10 +7,42 @@ const nickEl = document.getElementById('nick');
 const tpl = document.getElementById('row-tpl');
 
 let entries = [];
+let notes = {};
+
+// Each note lives under its own key: storage.sync caps a single item at 8 KB,
+// and keeping notes out of `entries` means editing one doesn't reload the tabs.
+// Must match noteKey() in content.js.
+const normNick = (s) => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+const noteKey = (e) => (e.uid ? `note:u${e.uid}` : `note:n${normNick(e.nick)}`);
 
 function persist() {
   chrome.storage.sync.set({ entries });
 }
+
+// Typing is debounced: storage.sync limits writes to 120 per minute.
+const noteTimers = new Map();
+
+function saveNote(key, text) {
+  if (text.trim()) notes[key] = text;
+  else delete notes[key];
+
+  clearTimeout(noteTimers.get(key));
+  noteTimers.set(key, setTimeout(() => {
+    noteTimers.delete(key);
+    if (notes[key]) chrome.storage.sync.set({ [key]: notes[key] });
+    else chrome.storage.sync.remove(key);
+  }, 400));
+}
+
+// The popup closes on any outside click — flush notes still waiting on the debounce.
+window.addEventListener('pagehide', () => {
+  for (const [key, timer] of noteTimers) {
+    clearTimeout(timer);
+    if (notes[key]) chrome.storage.sync.set({ [key]: notes[key] });
+    else chrome.storage.sync.remove(key);
+  }
+  noteTimers.clear();
+});
 
 function render() {
   listEl.textContent = '';
@@ -51,9 +83,17 @@ function render() {
       persist();
     });
 
+    const key = noteKey(entry);
+    const note = li.querySelector('.note');
+    note.value = notes[key] || '';
+    note.addEventListener('input', () => saveNote(key, note.value));
+
     li.querySelector('.remove').addEventListener('click', () => {
       entries.splice(index, 1);
       persist();
+      clearTimeout(noteTimers.get(key));
+      delete notes[key];
+      chrome.storage.sync.remove(key);
       render();
     });
 
@@ -74,7 +114,9 @@ formEl.addEventListener('submit', (e) => {
   nickEl.value = '';
 });
 
-chrome.storage.sync.get({ entries: [] }, (data) => {
-  entries = data.entries;
+chrome.storage.sync.get(null, (data) => {
+  entries = data.entries || [];
+  notes = {};
+  for (const [k, v] of Object.entries(data)) if (k.startsWith('note:')) notes[k] = v;
   render();
 });

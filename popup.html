@@ -20,6 +20,8 @@
     .row2 select { padding: 1px 2px; }
     .row2 .del-toggle { cursor: pointer; }
     .row2 .del-toggle.on { color: #c00; font-weight: 600; }
+    .note { display: block; box-sizing: border-box; width: 100%; margin-top: 4px; padding: 3px 6px;
+            font: inherit; color: #555; resize: vertical; min-height: 24px; }
     .empty { color: #999; margin-top: 10px; }
     .hint { color: #999; font-size: 11px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #eee; }
   </style>
@@ -60,6 +62,7 @@
           <input type="checkbox" class="del">удалять
         </label>
       </div>
+      <textarea class="note" rows="1" maxlength="1000" placeholder="Заметка: почему в ЧС (видна только вам)"></textarea>
     </li>
   </template>
 

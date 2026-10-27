@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GameDev.ru Blacklist",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Скрывает темы и посты пользователей из чёрного списка на форуме gamedev.ru.",
   "permissions": ["storage"],
   "action": {

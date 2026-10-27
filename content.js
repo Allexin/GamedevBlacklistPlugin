@@ -24,6 +24,7 @@
   const postActionOf = (e) => e.post || 'replace';
 
   let state = { ...DEFAULTS };
+  let notes = {};
   let byNick = new Map();
   let byUid = new Map();
 
@@ -40,6 +41,10 @@
       if (e.uid) byUid.set(String(e.uid), e);
     }
   }
+
+  // Notes are stored per user under their own keys. Must match noteKey() in popup.js.
+  const noteKey = (e) => (e.uid ? `note:u${e.uid}` : `note:n${normNick(e.nick)}`);
+  const noteOf = (e) => (e && notes[noteKey(e)]) || '';
 
   function getEntry(nick, uid) {
     if (uid != null && byUid.has(String(uid))) return byUid.get(String(uid));
@@ -100,8 +105,8 @@
       addBlockButton(head, nick, uid, entry);
       if (!entry) continue;
 
-      const body = head.nextElementSibling;
-      if (!body || !body.classList.contains('overflow')) continue;
+      const parts = postParts(head);
+      if (!parts.length || !parts[0].classList.contains('overflow')) continue;
 
       // The opening post carries the topic title — apply the topic action to it.
       if (head.id === 'm0') applyTopicOnPage(topicActionOf(entry));
@@ -111,29 +116,41 @@
         const delBtn = head.querySelector('button[data-url*="delmes="]');
         if (delBtn) {
           head.dataset.gdblDelete = '1';
-          enqueueDelete(delBtn.getAttribute('data-url'), head, body);
-          head.classList.add('gdbl-hidden'); // hide while deletion runs
-          body.classList.add('gdbl-hidden');
+          enqueueDelete(delBtn.getAttribute('data-url'), head, parts);
+          // hide while deletion runs
+          for (const el of [head, ...parts]) el.classList.add('gdbl-hidden');
           continue;
         }
       }
 
-      applyPost(head, body, postActionOf(entry));
+      applyPost(head, parts, postActionOf(entry), noteOf(entry));
     }
 
     if (delQueue.length) drainDeleteQueue();
   }
 
-  function applyPost(head, body, act) {
+  // A post body is not always a single block: a full-width image (div.full) or a
+  // spoiler (div#spoilerN) closes the first div.overflow, and the rest of the post
+  // continues as sibling blocks up to the next head.
+  function postParts(head) {
+    const parts = [];
+    for (let el = head.nextElementSibling;
+         el && el.matches('.overflow, .full, [id^="spoiler"]');
+         el = el.nextElementSibling) {
+      parts.push(el);
+    }
+    return parts;
+  }
+
+  function applyPost(head, parts, act, note) {
     if (act === 'show') return;
     if (act === 'hide') {
-      head.classList.add('gdbl-hidden');
-      body.classList.add('gdbl-hidden');
+      for (const el of [head, ...parts]) el.classList.add('gdbl-hidden');
       return;
     }
     head.classList.add('gdbl-post-head');
     maskNick(head);
-    collapseBody(body);
+    collapseBody(parts, note);
   }
 
   // Topic title (h1) + tab title on an open topic page, per the topic action.
@@ -158,7 +175,10 @@
     head.querySelector('div.pic')?.remove();
   }
 
-  function collapseBody(body) {
+  // The first part becomes the stub; everything else moves under it into the
+  // hidden original, so the whole post reveals and hides as one.
+  function collapseBody(parts, note) {
+    const [body, ...rest] = parts;
     if (body.dataset.gdblCollapsed) return;
     body.dataset.gdblCollapsed = '1';
     body.classList.add('gdbl-post');
@@ -166,11 +186,12 @@
     const original = document.createElement('div');
     original.className = 'gdbl-original';
     while (body.firstChild) original.appendChild(body.firstChild);
+    for (const el of rest) original.appendChild(el);
 
     const stub = document.createElement('div');
     stub.className = 'gdbl-stub';
     stub.textContent = POST_LABEL;
-    stub.title = 'Показать / скрыть';
+    stub.title = note ? `${note}\n\nНажмите, чтобы показать / скрыть` : 'Показать / скрыть';
     stub.addEventListener('click', () => body.classList.toggle('gdbl-revealed'));
 
     body.appendChild(stub);
@@ -185,7 +206,8 @@
     btn.className = 'gdbl-btn';
     btn.type = 'button';
     btn.textContent = entry ? 'из ЧС' : 'в ЧС';
-    btn.title = entry ? 'Убрать автора из чёрного списка'
+    const note = noteOf(entry);
+    btn.title = entry ? `Убрать автора из чёрного списка${note ? `\n\nЗаметка: ${note}` : ''}`
                       : `Добавить ${nick} в чёрный список`;
     btn.addEventListener('click', () => (entry ? removeEntry(nick, uid) : addEntry(nick, uid)));
     right.insertBefore(btn, right.firstChild);
@@ -193,8 +215,8 @@
 
   /* ---------------- Deletion ---------------- */
 
-  function enqueueDelete(url, head, body) {
-    if (url) delQueue.push({ url, head, body });
+  function enqueueDelete(url, head, parts) {
+    if (url) delQueue.push({ url, head, parts });
   }
 
   async function drainDeleteQueue() {
@@ -206,7 +228,7 @@
         try {
           if (await performDelete(job.url)) {
             job.head.remove();
-            job.body.remove();
+            for (const el of job.parts) el.remove();
           }
           // On failure the post stays hidden (already gdbl-hidden) — safe default.
         } catch (err) {
@@ -285,8 +307,9 @@
   }
 
   if (!isServicePage) {
-    chrome.storage.sync.get(DEFAULTS, (data) => {
-      state = { ...DEFAULTS, ...data };
+    chrome.storage.sync.get(null, (data) => {
+      state = { ...DEFAULTS, entries: data.entries || [] };
+      for (const [k, v] of Object.entries(data)) if (k.startsWith('note:')) notes[k] = v;
       apply();
       new MutationObserver(() => apply()).observe(document.body, { childList: true, subtree: true });
     });
@@ -295,6 +318,11 @@
       if (area !== 'sync') return;
       // A full re-apply after list edits is simpler than reverting DOM changes.
       if (changes.entries) location.reload();
+      // Note edits only refresh the tooltips' source; they show on the next render.
+      for (const [k, c] of Object.entries(changes)) {
+        if (!k.startsWith('note:')) continue;
+        if (c.newValue) notes[k] = c.newValue; else delete notes[k];
+      }
     });
   }
 })();
