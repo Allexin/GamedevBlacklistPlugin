@@ -57,3 +57,11 @@
   color: #c00;
   border-color: #c00;
 }
+
+.gdbl-note {
+  max-width: 500px;
+  color: #999;
+  font-style: italic;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}

@@ -123,7 +123,9 @@
         }
       }
 
-      applyPost(head, parts, postActionOf(entry), noteOf(entry));
+      const act = postActionOf(entry);
+      if (act !== 'hide') addNoteLine(head, noteOf(entry));
+      applyPost(head, parts, act, noteOf(entry));
     }
 
     if (delQueue.length) drainDeleteQueue();
@@ -173,6 +175,16 @@
       nickItem.classList.add('gdbl-nick');
     }
     head.querySelector('div.pic')?.remove();
+  }
+
+  // The note goes under the nick, continuing the "Участник / Постоялец" rank line.
+  function addNoteLine(head, note) {
+    const list = head.querySelector('ul');
+    if (!note || !list || list.querySelector('.gdbl-note')) return;
+    const item = document.createElement('li');
+    item.className = 'small gdbl-note';
+    item.textContent = note;
+    list.appendChild(item);
   }
 
   // The first part becomes the stub; everything else moves under it into the
